@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 public class HW06EditorTarget : TargetRules
 {
-	public HW06EditorTarget(TargetInfo Target) : base(Target)
+	public HW06EditorTarget( TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
