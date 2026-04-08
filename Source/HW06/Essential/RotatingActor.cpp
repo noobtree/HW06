@@ -99,12 +99,15 @@ void ARotatingActor::Tick(float DeltaTime)
 
 void ARotatingActor::RotatingAction_Implementation()
 {
+	// 프레임 시간 간격 얻기
 	float DeltaTime = GetWorld()->GetDeltaSeconds();
+
+	// 시간 비율에 따른 변화량 계산
 	FVector deltaEuler = rotatingSpeed * DeltaTime;
 
+	// 회전 적용
 	FRotator deltaRotator = FRotator::MakeFromEuler(deltaEuler);
 	bool bSweep = true;
-
 	AddActorLocalRotation(deltaRotator, bSweep);
 }
 

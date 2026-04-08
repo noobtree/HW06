@@ -99,12 +99,15 @@ void AMovingPlatformActor::Tick(float DeltaTime)
 
 void AMovingPlatformActor::MovingAction_Implementation()
 {
+	// 프레임 시간 간격 얻기
 	float DeltaTime = GetWorld()->GetDeltaSeconds();
+
+	// 시간 비율에 따른 변화량 계산
 	FVector deltaLocation = movingSpeed * DeltaTime;
 
+	// 이동 적용
 	bool bSweep = true;
 	FHitResult sweepResult;
-
 	AddActorLocalOffset(deltaLocation, bSweep, &sweepResult);
 }
 

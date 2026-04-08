@@ -91,14 +91,11 @@ void APeriodicRotatingActor::SetRotatingIntervalSeconds(const float newIntervalS
 
 	if (rotatingIntervalSeconds > 0)
 	{
+		// 기존 타이머가 실행중인 경우 현재까지의 회전을 적용
 		if (GetWorldTimerManager().IsTimerActive(rotatingHandler) == true)
 		{
 			// 기존 타이머의 경과 시간 확인
 			float DeltaTime = GetWorldTimerManager().GetTimerElapsed(rotatingHandler);
-
-			// 디버그 메시지 출력
-			FString debugMessage = FString::Printf(TEXT("%s - Rotate as %f sec"), *GetName(), DeltaTime);
-			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, debugMessage);
 
 			// 시간 비율에 따른 변화량 계산
 			FVector deltaEuler = rotatingSpeed * DeltaTime;
@@ -112,14 +109,14 @@ void APeriodicRotatingActor::SetRotatingIntervalSeconds(const float newIntervalS
 		// 게임 실행 중인 경우
 		if (GetWorld() && GetWorld()->IsGameWorld() == true)
 		{
+			bool bIsLoop = true;
 			// 타이머 설정 또는 덮어쓰기
-			GetWorldTimerManager().SetTimer(rotatingHandler, this, &APeriodicRotatingActor::RotatingAction, rotatingIntervalSeconds, true);
+			GetWorldTimerManager().SetTimer(rotatingHandler, this, &APeriodicRotatingActor::RotatingAction, rotatingIntervalSeconds, bIsLoop);
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("temporary logging"));
-
+		// 타이머 중단
 		GetWorldTimerManager().ClearTimer(rotatingHandler);
 	}
 }

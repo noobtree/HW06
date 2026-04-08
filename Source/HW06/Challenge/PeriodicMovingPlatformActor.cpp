@@ -54,7 +54,7 @@ void APeriodicMovingPlatformActor::PostEditChangeProperty(FPropertyChangedEvent&
 {
 	Super::PostEditChangeProperty(propertyChangedEvent);
 
-	// Unreal Editor에서 rotatingIntervalSeconds 변수값 변경 시
+	// Unreal Editor에서 movingIntervalSeconds 변수값 변경 시
 	if (propertyChangedEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(APeriodicMovingPlatformActor, movingIntervalSeconds))
 	{
 		// Setter 함수 호출
@@ -89,20 +89,33 @@ void APeriodicMovingPlatformActor::SetMovingIntervalSeconds(const float newInter
 	// 변수값 변경
 	movingIntervalSeconds = newIntervalSeconds;
 
-	// 타이머가 실행중인지 확인
-	if (GetWorldTimerManager().IsTimerActive(movingHandler) == true)
+	if (movingIntervalSeconds > 0)
 	{
-		// 기존 타이머의 경과 시간 확인
-		float DeltaTime = GetWorldTimerManager().GetTimerElapsed(movingHandler);
+		// 기존 타이머가 실행중인 경우 현재까지의 이동을 적용
+		if (GetWorldTimerManager().IsTimerActive(movingHandler) == true)
+		{
+			// 기존 타이머의 경과 시간 확인
+			float DeltaTime = GetWorldTimerManager().GetTimerElapsed(movingHandler);
 
-		// 시간 비율에 따른 변화량 계산
-		FVector deltaLocation = movingSpeed * DeltaTime;
+			// 시간 비율에 따른 변화량 계산
+			FVector deltaLocation = movingSpeed * DeltaTime;
 
-		// 이동 적용
-		bool bSweep = true;
-		AddActorLocalOffset(deltaLocation, bSweep);
+			// 이동 적용
+			bool bSweep = true;
+			AddActorLocalOffset(deltaLocation, bSweep);
+		}
 
-		// 타이머 덮어쓰기
-		GetWorldTimerManager().SetTimer(movingHandler, this, &APeriodicMovingPlatformActor::MovingAction, movingIntervalSeconds, true);
+		// 게임 실행 중인 경우
+		if (GetWorld()->IsGameWorld() == true)
+		{
+			bool bIsLoop = true;
+			// 타이머 설정 또는 덮어쓰기
+			GetWorldTimerManager().SetTimer(movingHandler, this, &APeriodicMovingPlatformActor::MovingAction, movingIntervalSeconds, bIsLoop);
+		}
+	}
+	else
+	{
+		// 타이머 중단
+		GetWorldTimerManager().ClearTimer(movingHandler);
 	}
 }
