@@ -6,10 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "RotatingActor.generated.h"
 
-// Forward Declaration
-class UInputMappingContext;
-class UInputAction;
-
 UCLASS()
 class HW06_API ARotatingActor : public AActor
 {
@@ -23,19 +19,12 @@ protected:
 	// DefaultSceneRoot Component
 	TObjectPtr<USceneComponent> sceneComponent;
 	// StaticMesh Component
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Rotating Control")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TObjectPtr<UStaticMeshComponent> staticMeshComponent;
 
 	// Rotating Speed per Seconds [deg/s]
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rotating Control")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rotation Control")
 	FVector rotatingSpeed = FVector(0, 0, 90);
-
-	// InputMappingContext Asset (EnhancedInput)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-	TObjectPtr<UInputMappingContext> inputMappingContextAsset;
-	// InputAction Asset (EnhancedInput)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-	TObjectPtr<UInputAction> triggerInputActionAsset;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

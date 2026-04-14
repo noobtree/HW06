@@ -19,11 +19,11 @@ protected:
 	// DefaultSceneRoot Component
 	TObjectPtr<USceneComponent> sceneComponent;
 	// StaticMesh Component
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PeriodicRotatingActor|Rendering")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TObjectPtr<UStaticMeshComponent> staticMeshComponent;
 
 	// Rotating Speed per Seconds [deg/s]
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PeriodicRotatingActor|RotatingControl")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rotation Control")
 	FVector rotatingSpeed = FVector(0, 0, 90);
 
 	FTimerHandle rotatingHandler;
@@ -37,7 +37,7 @@ protected:
 
 private:
 	// 회전 적용 시간 간격
-	UPROPERTY(EditAnywhere, BlueprintGetter = GetRotatingIntervalSeconds, BlueprintSetter = SetRotatingIntervalSeconds, Category = "PeriodicRotatingActor|RotatingControl")
+	UPROPERTY(EditAnywhere, BlueprintGetter = GetRotatingIntervalSeconds, BlueprintSetter = SetRotatingIntervalSeconds, Category = "Rotation Control")
 	float rotatingIntervalSeconds = 0.1f;
 
 public:	

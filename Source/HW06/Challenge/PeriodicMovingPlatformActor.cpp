@@ -43,9 +43,11 @@ void APeriodicMovingPlatformActor::BeginPlay()
 	FString debugMessage = FString::Printf(TEXT("%s - BeginPlay!"), *GetName());
 	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, debugMessage);
 
+	startLocation = GetActorLocation();
+
 	// movingHandler 타이머 설정 (5초 후부터 현재 인스턴스의 MovingAction 함수를 일정 시간 간격으로 반복하여 호출한다.)
 	bool bIsLoop = true;	// 반복 설정
-	float startDelay = 5;	// 최초 시간 지연 5초
+	float startDelay = 3;	// 최초 시간 지연 5초
 	GetWorldTimerManager().SetTimer(movingHandler, this, &APeriodicMovingPlatformActor::MovingAction, movingIntervalSeconds, bIsLoop, startDelay);
 }
 
@@ -72,16 +74,32 @@ void APeriodicMovingPlatformActor::Tick(float DeltaTime)
 
 void APeriodicMovingPlatformActor::MovingAction_Implementation()
 {
+	// 설정되 타이머의 경과 시간 얻기
+	float timerElapsed = GetWorldTimerManager().GetTimerElapsed(movingHandler);
 	// 설정된 타이머의 시간 간격 얻기
-	float DeltaTime = GetWorldTimerManager().GetTimerRate(movingHandler);
+	float timerRate = GetWorldTimerManager().GetTimerRate(movingHandler);
 
-	// 시간 비율에 따른 변화량 계산
-	FVector deltaLocation = movingSpeed * DeltaTime;
+	// 끝 지점 좌표 계산
+	FVector endLocation = startLocation + moveDistance * moveDirection.GetSafeNormal();
+
+	// 선형 보간을 사용하여 이동될 위치 계산
+	FVector newActorLocation;
+	if (bIsTowardStartLocation == true)
+	{
+		newActorLocation = FMath::Lerp(endLocation, startLocation, timerElapsed / timerRate);
+	}
+	else
+	{
+		newActorLocation = FMath::Lerp(startLocation, endLocation, timerElapsed / timerRate);
+	}
 
 	// 이동 적용
 	bool bSweep = true;
 	FHitResult sweepResult;
-	AddActorLocalOffset(deltaLocation, bSweep, &sweepResult);
+	SetActorLocation(newActorLocation, bSweep, &sweepResult);
+
+	// 목표 방향 변경
+	bIsTowardStartLocation = !bIsTowardStartLocation;
 }
 
 void APeriodicMovingPlatformActor::SetMovingIntervalSeconds(const float newIntervalSeconds)
@@ -94,15 +112,8 @@ void APeriodicMovingPlatformActor::SetMovingIntervalSeconds(const float newInter
 		// 기존 타이머가 실행중인 경우 현재까지의 이동을 적용
 		if (GetWorldTimerManager().IsTimerActive(movingHandler) == true)
 		{
-			// 기존 타이머의 경과 시간 확인
-			float DeltaTime = GetWorldTimerManager().GetTimerElapsed(movingHandler);
-
-			// 시간 비율에 따른 변화량 계산
-			FVector deltaLocation = movingSpeed * DeltaTime;
-
 			// 이동 적용
-			bool bSweep = true;
-			AddActorLocalOffset(deltaLocation, bSweep);
+			MovingAction();
 		}
 
 		// 게임 실행 중인 경우

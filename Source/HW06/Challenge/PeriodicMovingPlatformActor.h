@@ -19,14 +19,20 @@ protected:
 	// DefaultSceneRoot Component
 	TObjectPtr<USceneComponent> sceneComponent;
 	// StaticMesh Component
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "PeriodicMovingPlatformActor|Rendering")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TObjectPtr<UStaticMeshComponent> staticMeshComponent;
 
-	// Moving Speed per Seconds [cm/s]
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PeriodicMovingPlatformActor|MovingControl")
-	FVector movingSpeed = FVector(100, 0, 0);
-
-	FTimerHandle movingHandler;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement Control")
+	bool bIsTowardStartLocation = false;
+	// 시작 위치
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement Control")
+	FVector startLocation;
+	// 이동 방향
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Control")
+	FVector moveDirection = FVector(0, 0, 0);
+	// 이동 거리
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Control")
+	float moveDistance = 100;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -35,10 +41,13 @@ protected:
 	virtual void PostEditChangeProperty(struct FPropertyChangedEvent& propertyChangedEvent) override;
 #endif //WITH_EDITOR
 
-private:
-	// 회전 적용 시간 간격
-	UPROPERTY(EditAnywhere, BlueprintGetter = GetMovingIntervalSeconds, BlueprintSetter = SetMovingIntervalSeconds, Category = "PeriodicMovingPlatformActor|MovingControl")
-	float movingIntervalSeconds = 0.1f;
+protected:
+	// 이동 적용 시간 간격
+	UPROPERTY(EditAnywhere, BlueprintGetter = GetMovingIntervalSeconds, BlueprintSetter = SetMovingIntervalSeconds, Category = "Movement Control")
+	float movingIntervalSeconds = 1.5f;
+
+	// 주기적으로 연결된 함수를 호출하는 타이머
+	FTimerHandle movingHandler;
 
 public:	
 	// Called every frame
@@ -52,7 +61,7 @@ public:
 	virtual void MovingAction_Implementation();
 
 	UFUNCTION(BlueprintPure, Category = "PeriodicMovingPlatformActor|MovingControl")
-	inline float GetMovingIntervalSeconds() const { return movingIntervalSeconds; }
+	FORCEINLINE float GetMovingIntervalSeconds() const { return movingIntervalSeconds; }
 	UFUNCTION(BlueprintCallable, Category = "PeriodicMovingPlatformActor|MovingControl")
 	void SetMovingIntervalSeconds(const float newIntervalSeconds);
 };
