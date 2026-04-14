@@ -23,11 +23,11 @@ protected:
 	// DefaultSceneRoot Component
 	TObjectPtr<USceneComponent> sceneComponent;
 	// StaticMesh Component
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement Control")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Rotating Control")
 	TObjectPtr<UStaticMeshComponent> staticMeshComponent;
 
 	// Rotating Speed per Seconds [deg/s]
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Control")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rotating Control")
 	FVector rotatingSpeed = FVector(0, 0, 90);
 
 	// InputMappingContext Asset (EnhancedInput)

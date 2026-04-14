@@ -2,16 +2,12 @@
 
 
 #include "MovingPlatformActor.h"
-#include "EnhancedInputSubsystems.h"
-#include "EnhancedInputComponent.h"
-#include "InputMappingContext.h"
-#include "InputActionValue.h"
 
 // Sets default values
 AMovingPlatformActor::AMovingPlatformActor()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	// 초기 컴포넌트 생성
 	sceneComponent = CreateDefaultSubobject<USceneComponent>(FName("DefaultSceneRoot"));
@@ -33,14 +29,6 @@ AMovingPlatformActor::AMovingPlatformActor()
 		// 컴포넌트의 StaticMesh 프로퍼티에 로드된 에셋을 할당
 		staticMeshComponent->SetStaticMesh(meshAsset.Object);
 	}
-
-	// InputMappingContext 에셋 로드
-	static ConstructorHelpers::FObjectFinder<UInputMappingContext> imc_uasset(TEXT("/Game/Inputs/IMC_Player"));
-	inputMappingContextAsset = imc_uasset.Succeeded() == true ? imc_uasset.Object : nullptr;
-
-	// InputAction 에셋 로드
-	static ConstructorHelpers::FObjectFinder<UInputAction> ia_uasset(TEXT("/Game/Inputs/IA_Interaction"));
-	triggerInputActionAsset = ia_uasset.Succeeded() == true ? ia_uasset.Object : nullptr;
 }
 
 // Called when the game starts or when spawned
@@ -50,43 +38,11 @@ void AMovingPlatformActor::BeginPlay()
 
 	// 엔진 유효성 확인
 	check(GEngine != nullptr);
-	PrimaryActorTick.bCanEverTick = true;
 
 	// Debug 메시지 출력
 	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Green, TEXT("MovingPlatformActor - BeginPlay!"));
 
-	// 0번 인덱스의 PlayerController 얻기
-	APlayerController* playerController = GetWorld()->GetFirstPlayerController();
-	if (playerController != nullptr)
-	{
-		// 현재 Actor에서 사용자 입력을 받을 수 있도록 허용하기
-		EnableInput(playerController);
-
-		// playerController 객체가 로컬 플레이어인지 확인
-		if (ULocalPlayer* localPlayer = playerController->GetLocalPlayer())
-		{
-			// 로컬 플레이어의 입력 시스템 얻기
-			if (UEnhancedInputLocalPlayerSubsystem* inputSubSystem = localPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
-			{
-				// InputMappingContext 에셋 등록
-				if (inputMappingContextAsset != nullptr)
-				{
-					inputSubSystem->AddMappingContext(inputMappingContextAsset, 0);
-				}
-			}
-
-			// 기존의 입력 컴포넌트를 향상된 입력 컴포넌트로 변환
-			if (UEnhancedInputComponent* enhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent))
-			{
-				// InputAction 이벤트 연결
-				if (triggerInputActionAsset != nullptr)
-				{
-					// Triggered 이벤트에 MovingAction 함수 연결
-					enhancedInputComponent->BindAction(triggerInputActionAsset, ETriggerEvent::Triggered, this, &AMovingPlatformActor::MovingAction);
-				}
-			}
-		}
-	}
+	startLocation = GetActorLocation();
 }
 
 // Called every frame
@@ -94,7 +50,7 @@ void AMovingPlatformActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	//MovingAction();
+	MovingAction();
 }
 
 void AMovingPlatformActor::MovingAction_Implementation()
@@ -102,12 +58,20 @@ void AMovingPlatformActor::MovingAction_Implementation()
 	// 프레임 시간 간격 얻기
 	float DeltaTime = GetWorld()->GetDeltaSeconds();
 
-	// 시간 비율에 따른 변화량 계산
-	FVector deltaLocation = movingSpeed * DeltaTime;
+	// 선형 보간에 사용될 계수를 위한 변수 계산
+	float t = GetWorld()->GetTimeSeconds();
+	float frequency = (2 * PI) / (maxRange / movingSpeed);
+
+	// 끝 지점 좌표 계산
+	FVector endLocation = startLocation + maxRange * moveDirection.GetSafeNormal();
+
+	// 위치 선형 보간
+	float lerpFactor = 0.5 * FMath::Cos(frequency * t - PI) + 0.5f;
+	FVector newActorLocation = FMath::Lerp(startLocation, endLocation, lerpFactor);
 
 	// 이동 적용
 	bool bSweep = true;
 	FHitResult sweepResult;
-	AddActorLocalOffset(deltaLocation, bSweep, &sweepResult);
+	SetActorLocation(newActorLocation, bSweep, &sweepResult);
 }
 

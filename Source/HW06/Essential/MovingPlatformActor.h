@@ -6,10 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "MovingPlatformActor.generated.h"
 
-// Forward Declaration
-class UInputMappingContext;
-class UInputAction;
-
 UCLASS()
 class HW06_API AMovingPlatformActor : public AActor
 {
@@ -23,19 +19,21 @@ protected:
 	// DefaultSceneRoot Component
 	TObjectPtr<USceneComponent> sceneComponent;
 	// StaticMesh Component
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement Control")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	TObjectPtr<UStaticMeshComponent> staticMeshComponent;
 
+	// 시작 위치
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement Control")
+	FVector startLocation;
+	// 이동 방향
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Control")
+	FVector moveDirection = FVector(0, 0, 0);
+	// 이동 범위
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Control")
+	float maxRange = 100;
 	// Moving Speed per Seconds [cm/s]
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement Control")
-	FVector movingSpeed = FVector(100, 0, 0);
-
-	// InputMappingContext Asset (EnhancedInput)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-	TObjectPtr<UInputMappingContext> inputMappingContextAsset;
-	// InputAction Asset (EnhancedInput)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-	TObjectPtr<UInputAction> triggerInputActionAsset;
+	float movingSpeed = 100;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

@@ -49,27 +49,58 @@ public:
 
 #pragma endregion
 
-	UPROPERTY(EditAnywhere, Category = "Maze Generator|Mesh")
+#pragma region Maze Wall
+
+	UPROPERTY(EditAnywhere, Category = "Maze Generator|Wall")
 	TObjectPtr<UStaticMesh> wallMeshAsset;
 
-	UPROPERTY(EditAnywhere, Category = "Maze Generator|Mesh")
+	UPROPERTY(EditAnywhere, Category = "Maze Generator|Wall")
 	TObjectPtr<class UInstancedStaticMeshComponent> wallISMC;
+
+#pragma endregion
+
+	// 미로구조가 변경되는 시간 주기[sec]
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "10"), Category = "Maze Generator|Timer Setting")
+	float intervalSeconds = 10;
+
+#pragma region Trap
+
+	// 설치되는 함정의 최대 개수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0", ClampMax = "100"), Category = "Maze Generator|Trap")
+	int32 trapMaxCount = 5;
+
+	// 생성된 함정들을 관리하기 위한 배열
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Maze Generator|Trap")
+	TArray<TObjectPtr<class ANeedleTrap>> spawnedTrapList;
+
+	// 함정 생성 시 각 함정의 크기 비율
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Maze Generator|Trap")
+	FVector trapScale = FVector(1, 1, 1);
+
+#pragma endregion
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	// 미로 난수 생성을 위한 변수
 	FRandomStream randomStream;
+
+	// 주기적으로 미로를 재생성 하기 위한 타이머
+	FTimerHandle mazeTimerHandle;
 
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	// 미로 구조를 생성하고, 그에 따른 벽을 생성하는 함수
+	void GenerateMaze();
+
 #pragma region Generate Maze
 
-	// 미로를 생성하는 함수
+	// Wilson 알고리즘을 이용하여 미로 구조를 생성하는 함수
 	UFUNCTION()
-	void GenerateMaze();
+	void WilsonAlgorithmMaze();
 
 	// grid를 구성하는 모든 Cell들을 초기화하는 함수
 	void InitializeGrid();
@@ -111,7 +142,7 @@ public:
 
 #pragma endregion
 
-#pragma region Spawn Wall for each Cells
+#pragma region Generate Wall
 
 	// 기존에 생성되어있던 미로의 벽을 제거하는 함수
 	void InitializeMazeWalls();
@@ -121,6 +152,12 @@ public:
 
 #pragma endregion
 
+#pragma region Generate Trap
+
+	void InitializeTrap();
+	void GenerateTrap();
+
+#pragma endregion
 
 #pragma region Debug
 

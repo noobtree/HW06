@@ -2,8 +2,9 @@
 
 
 #include "MazeGenerator.h"
-#include "MazeCell.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "MazeCell.h"
+#include "NeedleTrap.h"
 
 // Sets default values
 AMazeGenerator::AMazeGenerator()
@@ -24,15 +25,9 @@ AMazeGenerator::AMazeGenerator()
 void AMazeGenerator::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	GenerateMaze();
 
-	BuildMazeWalls();
-
-	if (bDrawDebug == true)
-	{
-		DebugDrawMaze();
-	}
+	// 일정 시간 주기로 미로를 재생성
+	GetWorldTimerManager().SetTimer(mazeTimerHandle, this, &AMazeGenerator::GenerateMaze, intervalSeconds, true, 0);
 }
 
 // Called every frame
@@ -43,6 +38,20 @@ void AMazeGenerator::Tick(float DeltaTime)
 }
 
 void AMazeGenerator::GenerateMaze()
+{
+	WilsonAlgorithmMaze();
+
+	BuildMazeWalls();
+
+	GenerateTrap();
+
+	if (bDrawDebug == true)
+	{
+		DebugDrawMaze();
+	}
+}
+
+void AMazeGenerator::WilsonAlgorithmMaze()
 {
 	// grid의 최소 크기 확인
 	if (gridSize.X < 2 || gridSize.Y < 2)
@@ -455,13 +464,13 @@ void AMazeGenerator::BuildMazeWalls()
 
 	// 기존 벽 초기화
 	InitializeMazeWalls();
-	
+
 	// StaticMesh 에셋 설정
 	wallISMC->SetStaticMesh(wallMeshAsset);
 
 	// 미로 생성 기준 위치
 	const FVector MAZELEFTTOP = GetActorLocation();
-	
+
 	// 사용하려는 벽 Mesh의 크기
 	const FVector MESHSIZE = wallMeshAsset->GetBoundingBox().GetSize();
 	// 적용해야 할 scale
@@ -523,6 +532,59 @@ void AMazeGenerator::BuildMazeWalls()
 			}
 		}
 	}
+}
+
+void AMazeGenerator::InitializeTrap()
+{
+	while (spawnedTrapList.Num() > 0)
+	{
+		TObjectPtr<ANeedleTrap> spawnedTrap = spawnedTrapList.Pop();
+		spawnedTrap->Destroy();
+	}
+}
+
+void AMazeGenerator::GenerateTrap()
+{
+	InitializeTrap();
+
+	// 맵 최소 크기 제한
+	if (grid.Num() < 4)
+	{
+		return;
+	}
+
+	const FVector MAZELEFTTOP = GetActorLocation();
+
+	for (int i = 0; i < trapMaxCount; ++i)
+	{
+		// 무작위 Cell 선택
+		int32 randIndex = randomStream.RandRange(0, grid.Num() - 1);
+		FMazeCell& cell = grid[randIndex];
+
+		// 선택된 Cell이 시작 지점이 아닌 경우
+		if (cell.bIsEditable == true)
+		{
+			// Cell 중앙 위치 좌표 계산
+			FVector cellCenterLocation = MAZELEFTTOP + cellDistance * FVector(cell.row + 0.5f, cell.column + 0.5f, 0);
+
+			// 표면에 맞닿도록 설정
+			FHitResult hitResult;
+			FVector startLocation = cellCenterLocation + 1000 * FVector::UpVector;
+			FVector endLocation = cellCenterLocation + 1000 * FVector::DownVector;
+			if (GetWorld()->LineTraceSingleByChannel(hitResult, startLocation, endLocation, ECollisionChannel::ECC_WorldStatic) == true)
+			{
+				cellCenterLocation = hitResult.ImpactPoint;
+			}
+
+			FTransform spawnTransform = FTransform(FRotator::ZeroRotator, cellCenterLocation, trapScale);
+
+			// 함정 생성
+			TObjectPtr<ANeedleTrap> spawnedTrap = GetWorld()->SpawnActor<ANeedleTrap>(ANeedleTrap::StaticClass(), spawnTransform);
+
+			spawnedTrapList.Add(spawnedTrap);
+		}
+	}
+
 }
 
 void AMazeGenerator::DebugDrawMaze() const

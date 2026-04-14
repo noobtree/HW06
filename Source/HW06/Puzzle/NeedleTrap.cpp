@@ -19,6 +19,7 @@ ANeedleTrap::ANeedleTrap()
 	// 임의 경로에 위치하는 특정 타입의 에셋 로드
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> trapFrameMeshAsset(TEXT("/Game/Geometries/SM_Trap_Frame"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> trapSubjectMeshAsset(TEXT("/Game/Geometries/SM_Trap_Needle"));
+	static ConstructorHelpers::FObjectFinder<UCurveFloat> curveFloatAsset(TEXT("/Niagara/DefaultAssets/Curves/Templates/PulseOut.PulseOut"));
 
 	// 컴포넌트에 로드된 에셋 할당
 	if (trapFrameMeshAsset.Succeeded() == true)
@@ -28,6 +29,10 @@ ANeedleTrap::ANeedleTrap()
 	if (trapSubjectMeshAsset.Succeeded() == true)
 	{
 		trapSubject->SetStaticMesh(trapSubjectMeshAsset.Object);
+	}
+	if (curveFloatAsset.Succeeded() == true)
+	{
+		trapTimelineFloatCurve = curveFloatAsset.Object;
 	}
 
 	// Root 컴포넌트 설정
