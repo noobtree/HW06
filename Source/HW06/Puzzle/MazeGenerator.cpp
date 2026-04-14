@@ -3,6 +3,7 @@
 
 #include "MazeGenerator.h"
 #include "MazeCell.h"
+#include "Components/InstancedStaticMeshComponent.h"
 
 // Sets default values
 AMazeGenerator::AMazeGenerator()
@@ -12,9 +13,11 @@ AMazeGenerator::AMazeGenerator()
 
 	// 초기 컴포넌트 생성
 	sceneComponent = CreateDefaultSubobject<USceneComponent>(FName("DefaultSceneRoot"));
-
 	// Root 컴포넌트 설정
 	SetRootComponent(sceneComponent);
+
+	wallISMC = CreateDefaultSubobject<UInstancedStaticMeshComponent>(FName("ISM_Wall"));
+	wallISMC->SetupAttachment(sceneComponent);
 }
 
 // Called when the game starts or when spawned
@@ -23,7 +26,13 @@ void AMazeGenerator::BeginPlay()
 	Super::BeginPlay();
 	
 	GenerateMaze();
-	DebugDrawMaze();
+
+	BuildMazeWalls();
+
+	if (bDrawDebug == true)
+	{
+		DebugDrawMaze();
+	}
 }
 
 // Called every frame
@@ -40,6 +49,9 @@ void AMazeGenerator::GenerateMaze()
 	{
 		return;
 	}
+
+	// 무작위 시드 설정
+	randomStream.Initialize(FMath::Rand());
 
 	// grid에 존재하는 모든 Cell 초기화
 	InitializeGrid();
@@ -128,14 +140,30 @@ void AMazeGenerator::InitializeGrid()
 			// Cell 참조
 			FMazeCell& cell = grid[GetCellIndex({ startAreaLeftTop.X + deltaColumn, startAreaLeftTop.Y + deltaRow })];
 
-			// Cell의 전체 벽을 제거
-			cell.bHasPositiveRowWall = false;
-			cell.bHasNegativeRowWall = false;
-			cell.bHasPositiveColumnWall = false;
-			cell.bHasNegativeColumnWall = false;
-
-			// 다른 Cell에서 진입하지 못하도록 설정
+			// 최상단 Cell을 제외하고 상단 벽 제거
+			if (deltaRow > 0)
+			{
+				cell.bHasNegativeRowWall = false;
+			}
+			// 최좌측 Cell을 제외하고 좌측 벽 제거
+			if (deltaColumn > 0)
+			{
+				cell.bHasNegativeColumnWall = false;
+			}
+			// 최하단 Cell을 제외하고 하단 벽 제거
+			if (deltaRow + 1 < startAreaSizeDelta.Y)
+			{
+				cell.bHasPositiveRowWall = false;
+			}
+			// 최우측 Cell을 제외하고 우측 벽 제거
+			if (deltaColumn + 1 < startAreaSizeDelta.X)
+			{
+				cell.bHasPositiveColumnWall = false;
+			}
+			
+			// 다른 Cell에서 벽을 수정하지 못하도록 설정
 			cell.bIsEditable = false;
+			// 미로에 포함된 것으로 설정
 			cell.bIsInMaze = true;
 		}
 	}
@@ -408,6 +436,95 @@ void AMazeGenerator::MakeMazeExit()
 	}
 }
 
+void AMazeGenerator::InitializeMazeWalls()
+{
+	if (wallISMC != nullptr)
+	{
+		wallISMC->ClearInstances();
+	}
+}
+
+void AMazeGenerator::BuildMazeWalls()
+{
+	// 필요한 프로퍼티 nullptr 검사
+	if (wallISMC == nullptr || wallMeshAsset == nullptr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Null Reference Access Execption"));
+		return;
+	}
+
+	// 기존 벽 초기화
+	InitializeMazeWalls();
+	
+	// StaticMesh 에셋 설정
+	wallISMC->SetStaticMesh(wallMeshAsset);
+
+	// 미로 생성 기준 위치
+	const FVector MAZELEFTTOP = GetActorLocation();
+	
+	// 사용하려는 벽 Mesh의 크기
+	const FVector MESHSIZE = wallMeshAsset->GetBoundingBox().GetSize();
+	// 적용해야 할 scale
+	const FVector WALLSCALE = FVector(static_cast<float>(cellDistance) / MESHSIZE.X, 0.5f, 1);
+
+	// 각 Cell의 좌측, 상단 벽 생성 (마지막 행, 열의 경우 우측, 하단 벽 추가로 생성)
+	for (const FMazeCell& cell : grid)
+	{
+		FVector cellLeftTop = MAZELEFTTOP + cellDistance * FVector(cell.row, cell.column, 0);
+		FVector cellRightBottom = cellLeftTop + FVector(cellDistance, cellDistance, 0);
+
+		// 좌측 벽 생성
+		if (cell.bHasNegativeColumnWall == true)
+		{
+			// Transformm 계산
+			FVector location = cellLeftTop + FVector(0.5f * cellDistance, 0, 0);
+			FRotator rotation = FRotator::MakeFromEuler(FVector(0, 0, 0));
+			FTransform transform = FTransform(rotation, location, WALLSCALE);
+
+			// 로컬 좌표계로 Mesh Instance 추가
+			wallISMC->AddInstance(transform, true);
+		}
+		// 상단 벽 생성
+		if (cell.bHasNegativeRowWall == true)
+		{
+			// Transformm 계산
+			FVector location = cellLeftTop + FVector(0, 0.5f * cellDistance, 0);
+			FRotator rotation = FRotator::MakeFromEuler(FVector(0, 0, 90));
+			FTransform transform = FTransform(rotation, location, WALLSCALE);
+
+			// 로컬 좌표계로 Mesh Instance 추가
+			wallISMC->AddInstance(transform, true);
+		}
+
+		// 마지막 행, 열의 경우 우측, 하단 벽 생성
+		if (cell.row + 1 == gridSize.Y || cell.column + 1 == gridSize.X)
+		{
+			// 우측 벽 생성
+			if (cell.bHasPositiveColumnWall == true)
+			{
+				// Transformm 계산
+				FVector location = cellRightBottom - FVector(0.5f * cellDistance, 0, 0);
+				FRotator rotation = FRotator::MakeFromEuler(FVector(0, 0, 0));
+				FTransform transform = FTransform(rotation, location, WALLSCALE);
+
+				// 로컬 좌표계로 Mesh Instance 추가
+				wallISMC->AddInstance(transform, true);
+			}
+			// 하단 벽 생성
+			if (cell.bHasPositiveRowWall == true)
+			{
+				// Transformm 계산
+				FVector location = cellRightBottom - FVector(0, 0.5f * cellDistance, 0);
+				FRotator rotation = FRotator::MakeFromEuler(FVector(0, 0, 90));
+				FTransform transform = FTransform(rotation, location, WALLSCALE);
+
+				// 로컬 좌표계로 Mesh Instance 추가
+				wallISMC->AddInstance(transform, true);
+			}
+		}
+	}
+}
+
 void AMazeGenerator::DebugDrawMaze() const
 {
 	UWorld* world = GetWorld();
@@ -417,43 +534,43 @@ void AMazeGenerator::DebugDrawMaze() const
 	}
 
 	// 원의 중심 좌표
-	const FVector gridLeftTop = GetActorLocation();
+	const FVector MAZELEFTTOP = GetActorLocation() + 100 * FVector::DownVector;
 	// 선 색상
-	const FColor debugDrawColor = FColor::Red;
+	const FColor LINECOLOR = FColor::Red;
 	// 영구 지속
-	const bool bIsDrawPersistent = true;
+	const bool BPERSISTENT = true;
 	// 지속 시간
-	const float debugDrawLifeTime = 0.0f;
+	const float LIFETIME = 0.0f;
 	// 렌더링 우선순위
-	const uint8 debugDrawDepth = 0;
+	const uint8 DEPTH = 0;
 	// 선 굵기
-	const float debugDrawThickness = 2.0f;
+	const float THICKNESS = 10.0f;
 
 	// grid에 존재하는 전체 Cell 그리기
 	for (const FMazeCell& cell : grid)
 	{
-		FVector cellLeftTop = gridLeftTop + cellDistance * FVector(cell.row, cell.column, 0);
+		FVector cellLeftTop = MAZELEFTTOP + cellDistance * FVector(cell.row, cell.column, 0);
 		FVector cellRightBottom = cellLeftTop + FVector(cellDistance, cellDistance, 0);
 
 		// 좌측 벽 그리기
 		if (cell.bHasNegativeColumnWall == true)
 		{
-			DrawDebugLine(world, cellLeftTop, cellLeftTop + FVector(cellDistance, 0, 0), debugDrawColor, bIsDrawPersistent, debugDrawLifeTime, debugDrawDepth, debugDrawThickness);
+			DrawDebugLine(world, cellLeftTop, cellLeftTop + FVector(cellDistance, 0, 0), LINECOLOR, BPERSISTENT, LIFETIME, DEPTH, THICKNESS);
 		}
 		// 상단 벽 그리기
 		if (cell.bHasNegativeRowWall == true)
 		{
-			DrawDebugLine(world, cellLeftTop, cellLeftTop + FVector(0, cellDistance, 0), debugDrawColor, bIsDrawPersistent, debugDrawLifeTime, debugDrawDepth, debugDrawThickness);
+			DrawDebugLine(world, cellLeftTop, cellLeftTop + FVector(0, cellDistance, 0), LINECOLOR, BPERSISTENT, LIFETIME, DEPTH, THICKNESS);
 		}
 		// 우측 벽 그리기
 		if (cell.bHasPositiveColumnWall == true)
 		{
-			DrawDebugLine(world, cellRightBottom, cellRightBottom - FVector(cellDistance, 0, 0), debugDrawColor, bIsDrawPersistent, debugDrawLifeTime, debugDrawDepth, debugDrawThickness);
+			DrawDebugLine(world, cellRightBottom, cellRightBottom - FVector(cellDistance, 0, 0), LINECOLOR, BPERSISTENT, LIFETIME, DEPTH, THICKNESS);
 		}
 		// 하단 벽 그리기
 		if (cell.bHasPositiveRowWall == true)
 		{
-			DrawDebugLine(world, cellRightBottom, cellRightBottom - FVector(0, cellDistance, 0), debugDrawColor, bIsDrawPersistent, debugDrawLifeTime, debugDrawDepth, debugDrawThickness);
+			DrawDebugLine(world, cellRightBottom, cellRightBottom - FVector(0, cellDistance, 0), LINECOLOR, BPERSISTENT, LIFETIME, DEPTH, THICKNESS);
 		}
 	}
 }

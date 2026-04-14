@@ -18,8 +18,18 @@ public:
 	// DefaultSceneRoot Component
 	TObjectPtr<USceneComponent> sceneComponent;
 
+#pragma region Maze Settings
+
+	// DebugDraw 실행 여부
+	UPROPERTY(EditAnywhere, Category = "Maze Generator")
+	bool bDrawDebug = true;
+
 	UPROPERTY(EditAnywhere, Category = "Maze Generator")
 	TArray<struct FMazeCell> grid;
+
+	// 각 Cell 사이의 거리
+	UPROPERTY(EditAnywhere, Category = "Maze Generator")
+	uint32 cellDistance;
 
 	// 미로를 구성하는 Cell의 { column, row } 개수
 	UPROPERTY(EditAnywhere, Category = "Maze Generator")
@@ -37,9 +47,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Maze Generator")
 	FUint32Vector2 exitCellPosition = FUint32Vector2(1, 1);
 
-	// 각 Cell 사이의 거리
-	UPROPERTY(EditAnywhere, Category = "Maze Generator")
-	uint32 cellDistance;
+#pragma endregion
+
+	UPROPERTY(EditAnywhere, Category = "Maze Generator|Mesh")
+	TObjectPtr<UStaticMesh> wallMeshAsset;
+
+	UPROPERTY(EditAnywhere, Category = "Maze Generator|Mesh")
+	TObjectPtr<class UInstancedStaticMeshComponent> wallISMC;
 
 protected:
 	// Called when the game starts or when spawned
@@ -50,6 +64,8 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+#pragma region Generate Maze
 
 	// 미로를 생성하는 함수
 	UFUNCTION()
@@ -93,6 +109,23 @@ public:
 	// 미로의 출구를 생성하는 함수
 	void MakeMazeExit();
 
+#pragma endregion
+
+#pragma region Spawn Wall for each Cells
+
+	// 기존에 생성되어있던 미로의 벽을 제거하는 함수
+	void InitializeMazeWalls();
+
+	// 현재 미로에 맞게 벽을 생성하는 함수
+	void BuildMazeWalls();
+
+#pragma endregion
+
+
+#pragma region Debug
+
 	// DebugDraw- 함수를 사용하여 생성된 미로를 그리는 함수
 	void DebugDrawMaze() const;
+
+#pragma endregion
 };
